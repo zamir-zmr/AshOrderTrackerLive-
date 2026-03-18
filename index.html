@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
     <style>
-        :root { --primary: #0f172a; --accent: #e11d48; --success: #10b981; --info: #3b82f6; --bg: #33d0c8; --glass: rgba(255, 255, 255, 0.95); }
+        :root { --primary: #0f172a; --accent: #e11d48; --success: #10b981; --info: #3b82f6; --bg: #8de8ff66; --glass: rgba(255, 255, 255, 0.95); }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; overflow-x: hidden; }
         
         .header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -298,8 +298,7 @@ function startLiveClock() {
         }
     }, 1000);
 }
-    
-    
+
 function checkUserRegistration() {
     let user = localStorage.getItem('app_user_name');
     const overlay = document.getElementById('regOverlay');
@@ -435,7 +434,16 @@ function saveOrder() {
     }
 
     const currentUser = localStorage.getItem('app_user_name');
-    const timestamp = new Date().toLocaleString();
+    
+    // Line 380 ke aas-paas isse badlein:
+const timestamp = new Date().toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit', 
+    hour12: true 
+});
+
+    
     const pTime = document.getElementById('pickupTime').value;
 
     let sub = basket.reduce((a,b) => a + b.total, 0);
@@ -560,8 +568,27 @@ function renderHistory() {
             </div>`;
         return;
     }
+    historyContainer.innerHTML = filtered.map(x => {
+        
+        // --- NAYA LOGIC: Menu se Latest Price uthana ---
+        let updatedSubtotal = 0;
+        const updatedItemsHtml = x.items.map(item => {
+            const menuItem = menu.find(m => m.name === item.name);
+            const currentPrice = menuItem ? parseFloat(menuItem.price) : parseFloat(item.price);
+            const itemTotal = currentPrice * item.qty;
+            updatedSubtotal += itemTotal;
+            
+            return `
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span style="color:#334155;">${item.name} <small style="color:#64748b;">x${item.qty}</small></span>
+                    <span style="font-family:monospace; font-weight:600;">${itemTotal.toFixed(3)}</span>
+                </div>`;
+        }).join('');
 
-    historyContainer.innerHTML = filtered.map(x => `
+        const updatedVat = updatedSubtotal * 0.05;
+        const updatedGrandTotal = updatedSubtotal + updatedVat;
+
+        return `
         <div class="card" style="border-left: 8px solid ${x.isPicked ? 'var(--success)' : 'var(--accent)'}; margin-bottom: 25px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: block; clear: both;">
             
             <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748b; margin-bottom:12px;">
@@ -587,26 +614,22 @@ function renderHistory() {
             </div>
 
             <div style="background:#f8fafc; padding:12px; border-radius:10px; margin:12px 0; font-size:0.9rem; border:1px dashed #cbd5e1;">
-                ${x.items.map(i => `
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span style="color:#334155;">${i.name} <small style="color:#64748b;">x${i.qty}</small></span>
-                        <span style="font-family:monospace; font-weight:600;">${parseFloat(i.total).toFixed(3)}</span>
-                    </div>
-                `).join('')}
+                ${updatedItemsHtml}
                 
                 <div style="border-top:1px solid #cbd5e1; margin-top:10px; padding-top:8px; display:flex; flex-direction:column; gap:4px;">
                     <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b;">
                         <span>VAT (5%):</span> 
-                        <span style="font-family:monospace;">${(parseFloat(x.total) * 0.05 / 1.05).toFixed(3)}</span>
+                        <span style="font-family:monospace;">${updatedVat.toFixed(3)}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--success); font-size:1rem; margin-top:2px;">
                         <span>TOTAL (INC. VAT):</span> 
-                        <span style="font-family:monospace;">${parseFloat(x.total).toFixed(3)} OMR</span>
+                        <span style="font-family:monospace;">${updatedGrandTotal.toFixed(3)} OMR</span>
                     </div>
                 </div>
             </div>
 
-            <div style="font-size: 0.62rem; color: #64748b; font-style: italic; margin-top: 15px; padding: 8px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; justify-content: space-between; overflow-x: auto; white-space: nowrap; gap: 10px;">
+                                  <div style="font-size: 0.62rem; color: #64748b; font-style: italic; margin-top: 15px; padding: 8px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; justify-content: space-between; overflow-x: auto; white-space: nowrap; gap: 10px;">
+                
                 <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
                     <span>👤</span> 
                     <span>Last edited by: <b style="color: var(--primary); font-style: normal;">${x.lastEditedBy || 'Admin'}</b></span>
@@ -616,28 +639,31 @@ function renderHistory() {
                     <span>📅</span> 
                     <span style="font-style: normal;"><b>${x.lastEditDate || new Date().toLocaleDateString()}</b></span>
                 </div>
-
+                
                 <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
                     <span>🕒</span> 
-                    <span style="font-style: normal;"><b>${x.lastEditTime || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</b></span>
+                    <span style="font-style: normal;"><b>${x.lastEditTime || new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}</b></span>
                 </div>
+                
             </div>
+
+
             
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="toggleP(${x.id})" class="btn" style="flex:2; padding:14px; font-weight:bold; border-radius:10px; background:${x.isPicked ? '#f0fdf4' : '#ffffff'}; color:${x.isPicked ? '#10b981' : '#64748b'}; border:1px solid ${x.isPicked ? '#10b981' : '#cbd5e1'};">
                     ${x.isPicked ? '✓ PICKED' : 'MARK AS PICKED'}
                 </button>
-                
                 <button onclick="editOrder(${x.id})" class="btn" style="flex:1; padding:14px; border-radius:10px; background:#eff6ff; color:#3b82f6; border:1px solid #3b82f6; font-weight:bold;">
                     EDIT
                 </button>
-                
                 <button onclick="delO(${x.id})" style="background:none; border:none; color:#ef4444; padding:0 10px; font-weight:bold; font-size:1.4rem; cursor:pointer;">
                     ✕
                 </button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
+
 }
 
 // Ye extra code hai jo aapko seconds chalane ke liye chahiye
