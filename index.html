@@ -9,12 +9,21 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
     <style>
-        :root { --primary: #0f172a; --accent: #e11d48; --success: #10b981; --info: #3b82f6; --bg: #f8fafc; --glass: rgba(255, 255, 255, 0.95); }
+        :root { --primary: #0f172a; --accent: #e11d48; --success: #10b981; --info: #3b82f6; --bg: #33d0c8; --glass: rgba(255, 255, 255, 0.95); }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; overflow-x: hidden; }
         
         .header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .nav-icons { display: flex; gap: 15px; align-items: center; }
-        .nav-icons button { background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer; transition: 0.3s; }
+        
+.nav-icons button.active {
+    background: rgba(255, 255, 255, 0.2) !important; /* Light background */
+    border-radius: 12px;
+    padding: 5px 10px;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3); /* Choti si light/glow */
+    transform: scale(1.2); /* Thoda bada dikhega */
+    border-bottom: 2px solid white !important; /* Niche ek line aayegi */
+}
+
 
         .container { padding: 15px; max-width: 500px; margin: auto; }
         .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 15px; border: 1px solid #eef2f6; position: relative; transition: 0.3s; }
@@ -88,11 +97,22 @@
         ">Live</h2>
         <span id="currentUserDisplay" class="user-badge">Oprator: Loading...</span>
     </div>
+    
     <div class="nav-icons">
-        <button onclick="showView('home')">🏠</button>
-        <button onclick="showView('history')">📋</button>
-        <button onclick="showView('settings')">⚙️</button>
-    </div>
+    <button id="btn-home" class="active" onclick="showView('home')">
+        <span class="nav-text">Home</span>
+        <span class="nav-emoji">🏠</span>
+    </button>
+    <button id="btn-history" onclick="showView('history')">
+        <span class="nav-text">Orders</span>
+        <span class="nav-emoji">📋</span>
+    </button>
+    <button id="btn-settings" onclick="showView('settings')">
+        <span class="nav-text">Settings</span>
+        <span class="nav-emoji">⚙️</span>
+    </button>
+</div>
+
 </div>
 
 <div class="container">
@@ -235,61 +255,45 @@
 
 // --- FIX: Is code ko window.onload aur Registration ke liye replace karein ---
 
-// --- Updated Logic: Isse access block ho jayega ---
 window.onload = () => {
-    checkUserRegistration(); // Sabse pehle registration check hoga
-    document.getElementById('dateSearch').value = new Date().toISOString().split('T')[0];
+    checkUserRegistration();
     
-    // Firebase listener
+    // 1. Hamesha Aaj ki Date set karein
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('pickupDate').value = today;
+    document.getElementById('dateSearch').value = today;
+
+    // 2. Live Clock Shuru karein
+    startLiveClock();
+
+    // Firebase listener (Pehle wala)
     db.ref('ash_bakes_v10_data').on('value', (snapshot) => {
         const cloudData = snapshot.val();
         if (cloudData) {
-            if (cloudData.orders) {
-                orders = cloudData.orders;
-                localStorage.setItem('oman_v10_orders', JSON.stringify(orders));
-            }
-            if (cloudData.menu) {
-                menu = cloudData.menu;
-                localStorage.setItem('oman_v10_menu', JSON.stringify(menu));
-            }
+            if (cloudData.orders) orders = cloudData.orders;
+            if (cloudData.menu) menu = cloudData.menu;
             renderMenu(); 
             renderHistory();
         }
     });
 };
 
-function checkUserRegistration() {
-    let user = localStorage.getItem('app_user_name');
-    const overlay = document.getElementById('regOverlay');
-    
-    if (!user || user.trim() === "") {
-        // Agar naam nahi hai toh screen block karo
-        overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; 
-    } else {
-        overlay.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        document.getElementById('currentUserDisplay').innerText = "Oprator: " + user;
-    }
-}
+// Naya function live ghadi ke liye
+function startLiveClock() {
+    setInterval(() => {
+        const now = new Date();
+        // Time format: HH:MM:SS AM/PM
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        
+        // Agar aapne HTML mein clock id banayi hai toh wahan dikhayega
+        const clockEl = document.getElementById('liveClockDisplay');
+        if(clockEl) clockEl.innerText = timeString;
 
-function submitRegistration() {
-    let nameInput = document.getElementById('regNameInput');
-    let name = nameInput.value;
-    
-    if (name && name.trim().length >= 2) {
-        let finalName = name.trim().toUpperCase();
-        localStorage.setItem('app_user_name', finalName);
-        
-        // Access grant hone par UI update karein
-        document.getElementById('regOverlay').style.display = 'none';
-        document.body.style.overflow = 'auto';
-        document.getElementById('currentUserDisplay').innerText = "Oprator: " + finalName;
-        
-        showModal("Access Granted", "Welcome " + finalName + " to ASH BAKES System.", "✅", null);
-    } else {
-        alert("Access Denied: Please enter your name to continue.");
-    }
+        // Auto-fill pickup time input (Optional: agar aap chahte hain ki current time hamesha bhara rahe)
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        document.getElementById('pickupTime').value = `${hours}:${minutes}`;
+    }, 1000);
 }
 
 function checkUserRegistration() {
@@ -406,6 +410,7 @@ function changeUser() {
 }
 
 // 1. Save Order mein Pickup Date logic
+
 function saveOrder() {
     const t = document.getElementById('Ticket').value;
     const n = document.getElementById('name').value;
@@ -414,11 +419,19 @@ function saveOrder() {
         return showModal("Incomplete", "Ticket No, Name and Items are required!", "❌", null, false);
     }
     
+    // --- NAYA LOGIC: Ticket Number Duplicate Check (Sirf Aaj ki Date ke liye) ---
+    const pDate = document.getElementById('pickupDate').value || new Date().toISOString().split('T')[0];
+    
+    // Agar hum naya order save kar rahe hain (editingOrderId null hai)
+    if (!editingOrderId) {
+        let isExist = orders.some(o => o.Ticket == t && o.date === pDate);
+        if (isExist) {
+            return showModal("Duplicate Ticket", `Ticket No. ${t} Exist `, "⚠️", null);
+        }
+    }
+
     const currentUser = localStorage.getItem('app_user_name');
     const timestamp = new Date().toLocaleString();
-    
-    // Pickup Date uthao, agar khali hai toh aaj ki date lo
-    const pDate = document.getElementById('pickupDate').value || new Date().toISOString().split('T')[0];
     const pTime = document.getElementById('pickupTime').value;
 
     let sub = basket.reduce((a,b) => a + b.total, 0);
@@ -431,12 +444,12 @@ function saveOrder() {
         pickup: pTime,
         items: [...basket], 
         total: sub * 1.05, 
-        // YE SABSE ZAROORI LINE HAI:
-        date: pDate, // Ab order usi date ke filter mein dikhega jo pickup date hai
+        date: pDate, 
         id: editingOrderId || Date.now(), 
         isPicked: false,
         lastEditedBy: currentUser,
-        lastEditedTime: timestamp
+        lastEditedTime: timestamp,
+        lastEditDate: new Date().toLocaleDateString()
     };
 
     if(editingOrderId) {
@@ -451,7 +464,6 @@ function saveOrder() {
     syncToFirebase();
     resetForm();
     
-    // Save karne ke baad usi date par le jao jo select ki thi
     document.getElementById('dateSearch').value = pDate;
     showView('history'); 
     renderHistory();
@@ -914,16 +926,53 @@ function resetForm() {
     if (cancelBtn) cancelBtn.style.display = "none";
 }
 
+function showView(v) {
+    // 1. Saari views ko hide karein
+    document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+    
+    // 2. Selected view ko dikhayein
+    document.getElementById(v + 'View').classList.add('active');
 
-    function showView(v) {
-        document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
-        document.getElementById(v + 'View').classList.add('active');
+    // 3. Saare buttons se 'active' class hatayein
+    document.querySelectorAll('.nav-icons button').forEach(btn => btn.classList.remove('active'));
+
+    // 4. Click kiye huye button par 'active' class lagayein
+    // Iske liye humein buttons ko IDs deni hogi (Niche HTML dekhein)
+    const activeBtn = document.getElementById('btn-' + v);
+    if(activeBtn) activeBtn.classList.add('active');
+}
+
+
+function autoTicket() {
+    // 1. Pickup Date waale input se date uthayein (Agar khali hai toh aaj ki date lein)
+    let selectedDate = document.getElementById('pickupDate').value;
+    if (!selectedDate) {
+        selectedDate = new Date().toISOString().split('T')[0];
+    }
+    
+    // 2. Sirf us SELECTED DATE ke orders ko filter karein
+    let dateOrders = orders.filter(o => o.date === selectedDate);
+    
+    let nextTicket = 1;
+
+    if (dateOrders.length > 0) {
+        // Us specific date ka sabse bada ticket number dhundhein
+        let max = 0;
+        dateOrders.forEach(o => {
+            let tNum = parseInt(o.Ticket);
+            if (tNum > max) max = tNum;
+        });
+        nextTicket = max + 1;
     }
 
-    function autoTicket() {
-        let max = 0; orders.forEach(o => { if(parseInt(o.Ticket) > max) max = parseInt(o.Ticket); });
-        document.getElementById('Ticket').value = max + 1;
+    // 3. Safety Check: Ensure karein ki ye number us date ke liye unique ho
+    while (orders.some(o => o.Ticket == nextTicket && o.date === selectedDate)) {
+        nextTicket++;
     }
+
+    // Input field mein ticket number set karein
+    document.getElementById('Ticket').value = nextTicket;
+}
 
     function showModal(title, msg, icon, onConfirm) {
         const m = document.getElementById('customModal');
