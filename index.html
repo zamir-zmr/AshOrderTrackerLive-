@@ -263,10 +263,9 @@ window.onload = () => {
     document.getElementById('pickupDate').value = today;
     document.getElementById('dateSearch').value = today;
 
-    // 2. Live Clock Shuru karein
-    startLiveClock();
+    // 2. Live Clock yahan se hata di gayi hai (startLiveClock remove kiya gaya)
 
-    // Firebase listener (Pehle wala)
+    // Firebase listener (Pehle wala) - No changes here
     db.ref('ash_bakes_v10_data').on('value', (snapshot) => {
         const cloudData = snapshot.val();
         if (cloudData) {
@@ -414,6 +413,7 @@ function changeUser() {
 
 // 1. Save Order mein Pickup Date logic
 
+
 function saveOrder() {
     const t = document.getElementById('Ticket').value;
     const n = document.getElementById('name').value;
@@ -422,29 +422,20 @@ function saveOrder() {
         return showModal("Incomplete", "Ticket No, Name and Items are required!", "❌", null, false);
     }
     
-    // --- NAYA LOGIC: Ticket Number Duplicate Check (Sirf Aaj ki Date ke liye) ---
     const pDate = document.getElementById('pickupDate').value || new Date().toISOString().split('T')[0];
-    
-    // Agar hum naya order save kar rahe hain (editingOrderId null hai)
+    const pTime = document.getElementById('pickupTime').value; // Yeh aapka set kiya hua time hai
+
     if (!editingOrderId) {
         let isExist = orders.some(o => o.Ticket == t && o.date === pDate);
         if (isExist) {
-            return showModal("Duplicate Ticket", `Ticket No. ${t} Exist `, "⚠️", null);
+            return showModal("Duplicate Ticket", `Ticket No. ${t} Exist`, "⚠️", null);
         }
     }
 
-    const currentUser = localStorage.getItem('app_user_name');
-    
-    // Line 380 ke aas-paas isse badlein:
-const timestamp = new Date().toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit', 
-    hour12: true 
-});
+    const currentUser = localStorage.getItem('app_user_name') || 'Admin';
 
-    
-    const pTime = document.getElementById('pickupTime').value;
+    // FORMATTING: Jo time aapne box mein set kiya (HH:MM), uske sath seconds (:00) jod rahe hain
+    const manualTimeWithSeconds = pTime ? pTime + ":00" : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
 
     let sub = basket.reduce((a,b) => a + b.total, 0);
     
@@ -460,8 +451,8 @@ const timestamp = new Date().toLocaleTimeString([], {
         id: editingOrderId || Date.now(), 
         isPicked: false,
         lastEditedBy: currentUser,
-        lastEditedTime: timestamp,
-        lastEditDate: new Date().toLocaleDateString()
+        lastEditedTime: manualTimeWithSeconds, // AB YAHAN WAHI TIME SAVE HOGA JO AAPNE SET KIYA
+        lastEditDate: pDate // Wahi date jo aapne select ki
     };
 
     if(editingOrderId) {
