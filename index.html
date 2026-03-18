@@ -234,6 +234,8 @@
 
 
 // --- FIX: Is code ko window.onload aur Registration ke liye replace karein ---
+
+// --- Updated Logic: Isse access block ho jayega ---
 window.onload = () => {
     checkUserRegistration(); // Sabse pehle registration check hoga
     document.getElementById('dateSearch').value = new Date().toISOString().split('T')[0];
@@ -255,6 +257,40 @@ window.onload = () => {
         }
     });
 };
+
+function checkUserRegistration() {
+    let user = localStorage.getItem('app_user_name');
+    const overlay = document.getElementById('regOverlay');
+    
+    if (!user || user.trim() === "") {
+        // Agar naam nahi hai toh screen block karo
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; 
+    } else {
+        overlay.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        document.getElementById('currentUserDisplay').innerText = "Oprator: " + user;
+    }
+}
+
+function submitRegistration() {
+    let nameInput = document.getElementById('regNameInput');
+    let name = nameInput.value;
+    
+    if (name && name.trim().length >= 2) {
+        let finalName = name.trim().toUpperCase();
+        localStorage.setItem('app_user_name', finalName);
+        
+        // Access grant hone par UI update karein
+        document.getElementById('regOverlay').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        document.getElementById('currentUserDisplay').innerText = "Oprator: " + finalName;
+        
+        showModal("Access Granted", "Welcome " + finalName + " to ASH BAKES System.", "✅", null);
+    } else {
+        alert("Access Denied: Please enter your name to continue.");
+    }
+}
 
 function checkUserRegistration() {
     let user = localStorage.getItem('app_user_name');
