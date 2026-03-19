@@ -143,6 +143,22 @@
 
     </div>
 </div>
+<div class="input-group">
+    <label>📍 Pickup Branch</label>
+    <select id="pickupBranch" class="form-control" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; margin-top: 5px; background: white;">
+      
+        <option value="Ash Bakes - Al hail">Ash Bakes - Al hail</option>
+        
+        <option value="Ash Bakes - Al khuwair">Ash Bakes - Al khuwair</option>
+        
+        <option value="Ash Cafe - Al hail">Ash Cafe - Al hail</option>
+        
+        <option value="Ash Cafe - Al">Ash Cafe - Al khuwair</option>
+        
+        <option value="Ash Bakes - Mabela">Ash Bakes - Mabela</option>
+    </select>
+</div>
+
 
 
 
@@ -418,12 +434,15 @@ function saveOrder() {
     const t = document.getElementById('Ticket').value;
     const n = document.getElementById('name').value;
     
+    // NAYA: Branch selection variable
+    const branch = document.getElementById('pickupBranch') ? document.getElementById('pickupBranch').value : 'Seeb';
+    
     if(!t || !n || !basket.length) {
         return showModal("Incomplete", "Ticket No, Name and Items are required!", "❌", null, false);
     }
     
     const pDate = document.getElementById('pickupDate').value || new Date().toISOString().split('T')[0];
-    const pTime = document.getElementById('pickupTime').value; // Yeh aapka set kiya hua time hai
+    const pTime = document.getElementById('pickupTime').value;
 
     if (!editingOrderId) {
         let isExist = orders.some(o => o.Ticket == t && o.date === pDate);
@@ -434,7 +453,6 @@ function saveOrder() {
 
     const currentUser = localStorage.getItem('app_user_name') || 'Admin';
 
-    // FORMATTING: Jo time aapne box mein set kiya (HH:MM), uske sath seconds (:00) jod rahe hain
     const manualTimeWithSeconds = pTime ? pTime + ":00" : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
 
     let sub = basket.reduce((a,b) => a + b.total, 0);
@@ -445,14 +463,15 @@ function saveOrder() {
         phone: document.getElementById('phone').value, 
         pickupDate: pDate, 
         pickup: pTime,
+        pickupBranch: branch, // NAYA: Branch yahan save hogi
         items: [...basket], 
         total: sub * 1.05, 
         date: pDate, 
         id: editingOrderId || Date.now(), 
         isPicked: false,
         lastEditedBy: currentUser,
-        lastEditedTime: manualTimeWithSeconds, // AB YAHAN WAHI TIME SAVE HOGA JO AAPNE SET KIYA
-        lastEditDate: pDate // Wahi date jo aapne select ki
+        lastEditedTime: manualTimeWithSeconds,
+        lastEditDate: pDate
     };
 
     if(editingOrderId) {
@@ -591,6 +610,7 @@ function renderHistory() {
                 <div>
                     <div style="font-weight:800; font-size:1.15rem; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">${x.name}</div>
                     <div style="font-size:0.9rem; color:#64748b; margin-top:2px;">📞 ${x.phone || 'No Contact'}</div>
+                    <div style="font-size:0.85rem; color:var(--info); font-weight:bold; margin-top:4px;">📍 Branch: ${x.pickupBranch || 'Seeb'}</div>
                 </div>
                 
                 <div style="text-align: right;">
@@ -619,8 +639,7 @@ function renderHistory() {
                 </div>
             </div>
 
-                                  <div style="font-size: 0.62rem; color: #64748b; font-style: italic; margin-top: 15px; padding: 8px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; justify-content: space-between; overflow-x: auto; white-space: nowrap; gap: 10px;">
-                
+            <div style="font-size: 0.62rem; color: #64748b; font-style: italic; margin-top: 15px; padding: 8px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; justify-content: space-between; overflow-x: auto; white-space: nowrap; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
                     <span>👤</span> 
                     <span>Last edited by: <b style="color: var(--primary); font-style: normal;">${x.lastEditedBy || 'Admin'}</b></span>
@@ -635,10 +654,7 @@ function renderHistory() {
                     <span>🕒</span> 
                     <span style="font-style: normal;"><b>${x.lastEditTime || new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}</b></span>
                 </div>
-                
             </div>
-
-
             
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="toggleP(${x.id})" class="btn" style="flex:2; padding:14px; font-weight:bold; border-radius:10px; background:${x.isPicked ? '#f0fdf4' : '#ffffff'}; color:${x.isPicked ? '#10b981' : '#64748b'}; border:1px solid ${x.isPicked ? '#10b981' : '#cbd5e1'};">
@@ -654,7 +670,6 @@ function renderHistory() {
         </div>
         `;
     }).join('');
-
 }
 
 // Ye extra code hai jo aapko seconds chalane ke liye chahiye
@@ -753,16 +768,7 @@ setInterval(() => {
             </div>
 
             <div style="font-size: 0.62rem; color: #64748b; font-style: italic; margin-top: 15px; padding: 8px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; align-items: center; justify-content: space-between; gap: 4px; overflow-x: auto; white-space: nowrap;">
-                
-                
-                
-               
-
-              
-           
-                
-                
-                
+                       
                 
     `).join('');
 }
